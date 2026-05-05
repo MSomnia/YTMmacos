@@ -1,0 +1,25 @@
+# Spec files
+*.spec
+*.spec.md
+*_Spec_*.md
+*_spec_*.md
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.app/
+
+# Environment
+.env
+.env.local
