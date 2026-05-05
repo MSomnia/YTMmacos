@@ -1,6 +1,16 @@
 import Cocoa
 
+@main
 final class AppDelegate: NSObject, NSApplicationDelegate {
+
+    @MainActor
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.run()
+    }
+
 
     private let appState = AppState()
     private var statusBarController: StatusBarController?
