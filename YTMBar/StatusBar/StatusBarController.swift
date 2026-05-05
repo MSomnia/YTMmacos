@@ -12,7 +12,7 @@ final class StatusBarController {
         self.appState = appState
         self.playerWC = playerWindowController
 
-        statusItem = NSStatusBar.system.statusItem(withLength: 380)
+        statusItem = NSStatusBar.system.statusItem(withLength: 200)
         buildView()
     }
 
@@ -28,10 +28,10 @@ final class StatusBarController {
 
         let height = NSStatusBar.system.thickness
         let hv = NSHostingView(rootView: view)
-        hv.frame = NSRect(x: 0, y: 0, width: 380, height: height)
+        hv.frame = NSRect(x: 0, y: 0, width: 200, height: height)
 
         guard let button = statusItem.button else { return }
-        button.frame = NSRect(x: 0, y: 0, width: 380, height: height)
+        button.frame = NSRect(x: 0, y: 0, width: 200, height: height)
         button.addSubview(hv)
         // Clear default action so SwiftUI buttons receive all left-click events.
         // Right-click is handled by SwiftUI's .contextMenu modifier.

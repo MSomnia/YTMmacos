@@ -18,13 +18,13 @@ struct StatusBarView: View {
                 .frame(width: 16)
 
             Button(action: onToggleWindow) {
-                Text(displayText)
-                    .font(.system(size: 12))
-                    .italic(!appState.lyricsAvailable && appState.currentTrack != nil)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: 220, alignment: .leading)
+                MarqueeText(
+                    text: displayText,
+                    containerWidth: 120,
+                    italic: showingFallback,
+                    speed: 30,
+                    pauseAt: 1
+                )
             }
             .buttonStyle(.plain)
 
@@ -57,12 +57,23 @@ struct StatusBarView: View {
         .buttonStyle(.plain)
     }
 
+    // True when showing track info instead of lyrics (triggers italic)
+    private var showingFallback: Bool {
+        appState.currentLyricLine.isEmpty && appState.currentTrack != nil
+    }
+
     private var displayText: String {
+        // Priority 1: current lyric line
         if !appState.currentLyricLine.isEmpty {
             return appState.currentLyricLine
         }
+        // Priority 2: track info fallback
         if let track = appState.currentTrack {
-            return "\(track.title) — \(track.artist)"
+            var text = "\(track.title) — \(track.artist)"
+            if !track.album.isEmpty {
+                text += " · \(track.album)"
+            }
+            return text
         }
         return "YouTube Music"
     }

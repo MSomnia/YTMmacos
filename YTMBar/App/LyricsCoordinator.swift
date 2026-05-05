@@ -16,8 +16,10 @@ final class LyricsCoordinator {
     private func setupObservers() {
         appState.$currentTrack
             .removeDuplicates()
+            .compactMap { $0 }          // ignore nil (nothing playing)
+            .filter { !$0.title.isEmpty }
             .sink { [weak self] track in
-                guard let self, let track, !track.videoId.isEmpty else { return }
+                guard let self else { return }
                 Task { [weak self] in
                     await self?.engine.trackChanged(
                         videoId: track.videoId,
@@ -30,16 +32,12 @@ final class LyricsCoordinator {
 
         engine.currentLinePublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] line in
-                self?.appState.currentLyricLine = line
-            }
+            .sink { [weak self] in self?.appState.currentLyricLine = $0 }
             .store(in: &cancellables)
 
         engine.availablePublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] available in
-                self?.appState.lyricsAvailable = available
-            }
+            .sink { [weak self] in self?.appState.lyricsAvailable = $0 }
             .store(in: &cancellables)
     }
 

@@ -34,7 +34,6 @@ final class PlayerWindowController: NSObject {
     private func buildWindow() {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
-        config.applicationNameForUserAgent = "YTMBar/1.0 Safari/605.1.15"
         config.defaultWebpagePreferences.allowsContentJavaScript = true
 
         let ucc = config.userContentController
@@ -45,6 +44,8 @@ final class PlayerWindowController: NSObject {
         wv.allowsBackForwardNavigationGestures = true
         wv.navigationDelegate = self
         wv.uiDelegate = self
+        // Full desktop Safari UA — prevents Google from blocking OAuth in embedded WebView
+        wv.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15"
         webView = wv
 
         let frame = savedFrame() ?? NSRect(x: 200, y: 200, width: 1024, height: 680)
@@ -68,18 +69,24 @@ final class PlayerWindowController: NSObject {
     // MARK: - Playback Commands
 
     func togglePlayPause() {
-        webView?.evaluateJavaScript(
-            "document.querySelector('.play-pause-button')?.click()", completionHandler: nil)
+        webView?.evaluateJavaScript("""
+            (document.querySelector('ytmusic-player-bar #play-pause-button') ||
+             document.querySelector('ytmusic-player-bar .play-pause-button'))?.click()
+            """, completionHandler: nil)
     }
 
     func nextTrack() {
-        webView?.evaluateJavaScript(
-            "document.querySelector('.next-button')?.click()", completionHandler: nil)
+        webView?.evaluateJavaScript("""
+            (document.querySelector('ytmusic-player-bar .next-button') ||
+             document.querySelector('ytmusic-player-bar #next-button'))?.click()
+            """, completionHandler: nil)
     }
 
     func previousTrack() {
-        webView?.evaluateJavaScript(
-            "document.querySelector('.previous-button')?.click()", completionHandler: nil)
+        webView?.evaluateJavaScript("""
+            (document.querySelector('ytmusic-player-bar .previous-button') ||
+             document.querySelector('ytmusic-player-bar #previous-button'))?.click()
+            """, completionHandler: nil)
     }
 
     // MARK: - Frame Persistence
@@ -133,18 +140,29 @@ extension PlayerWindowController: WKNavigationDelegate {
         decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
     ) {
-        guard let host = navigationAction.request.url?.host else {
-            decisionHandler(.allow); return
-        }
-        let allowed = ["music.youtube.com", "accounts.google.com", "www.google.com"]
-        if allowed.contains(where: { host == $0 || host.hasSuffix("." + $0) }) {
+        guard let url = navigationAction.request.url,
+              let host = url.host
+        else { decisionHandler(.allow); return }
+
+        if Self.isInternalHost(host) {
             decisionHandler(.allow)
         } else {
-            if let url = navigationAction.request.url {
-                NSWorkspace.shared.open(url)
-            }
+            NSWorkspace.shared.open(url)
             decisionHandler(.cancel)
         }
+    }
+
+    // Domains that must stay inside the WebView (auth + content)
+    private static func isInternalHost(_ host: String) -> Bool {
+        let internalDomains = [
+            "youtube.com",      // music.youtube.com, accounts.youtube.com, www.youtube.com
+            "google.com",       // accounts.google.com, www.google.com, signin.google.com
+            "googleapis.com",   // Google API endpoints used during auth
+            "gstatic.com",      // Google static assets (fonts, images) needed for login UI
+            "googlevideo.com",  // YouTube video/audio streaming
+            "ggpht.com",        // Google user photos
+        ]
+        return internalDomains.contains(where: { host == $0 || host.hasSuffix("." + $0) })
     }
 }
 
@@ -157,7 +175,15 @@ extension PlayerWindowController: WKUIDelegate {
         for navigationAction: WKNavigationAction,
         windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
-        if let url = navigationAction.request.url {
+        guard let url = navigationAction.request.url,
+              let host = url.host
+        else { return nil }
+
+        if Self.isInternalHost(host) {
+            // Auth popup (e.g. accounts.youtube.com/accounts/CheckConnection):
+            // load in the same WebView so cookies/session are preserved.
+            webView.load(navigationAction.request)
+        } else {
             NSWorkspace.shared.open(url)
         }
         return nil

@@ -11,11 +11,12 @@ final class AppState: ObservableObject {
     @Published var lyricsAvailable = false
 
     func update(from payload: [String: Any]) {
-        let title = (payload["title"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let artist = (payload["artist"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let title   = (payload["title"]  as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let artist  = (payload["artist"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let album   = (payload["album"]  as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let videoId = payload["videoId"] as? String ?? ""
 
-        let newTrack = title.isEmpty ? nil : Track(title: title, artist: artist, videoId: videoId)
+        let newTrack = title.isEmpty ? nil : Track(title: title, artist: artist, album: album, videoId: videoId)
         if newTrack != currentTrack {
             currentTrack = newTrack
             currentLyricLine = ""

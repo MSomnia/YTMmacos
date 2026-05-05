@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
     <key>title</key>
-    <string>yt-formatted-string.title</string>
+    <string>ytmusic-player-bar .content-info-wrapper .title yt-formatted-string</string>
     <key>artist</key>
-    <string>yt-formatted-string.byline</string>
+    <string>ytmusic-player-bar .content-info-wrapper .byline yt-formatted-string</string>
     <key>playPause</key>
-    <string>.play-pause-button</string>
+    <string>ytmusic-player-bar #play-pause-button</string>
     <key>next</key>
-    <string>.next-button</string>
+    <string>ytmusic-player-bar .next-button</string>
     <key>previous</key>
-    <string>.previous-button</string>
+    <string>ytmusic-player-bar .previous-button</string>
     <key>player</key>
     <string>ytmusic-player</string>
 </dict>

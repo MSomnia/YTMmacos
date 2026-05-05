@@ -6,25 +6,33 @@ actor LyricsEngine {
     nonisolated let availablePublisher   = CurrentValueSubject<Bool, Never>(false)
 
     private var lines: [LyricLine] = []
-    private var currentVideoId: String?
+    private var currentKey: String?
     private var cache: [String: [LyricLine]] = [:]
     private let captionsFetcher = YouTubeCaptionsFetcher()
+    private let lrclibFetcher   = LRCLIBFetcher()
 
     // MARK: - Public Interface
 
     func trackChanged(videoId: String, title: String, artist: String) async {
-        guard videoId != currentVideoId else { return }
-        currentVideoId = videoId
+        // Use videoId when available; fall back to "title|artist" so tracks
+        // without a URL videoId still get a stable, unique cache key.
+        let key = videoId.isEmpty ? "\(title)|\(artist)" : videoId
+        guard key != currentKey else { return }
+
+        currentKey = key
         lines = []
         currentLinePublisher.send("")
         availablePublisher.send(false)
-        await fetchLyrics(videoId: videoId, title: title, artist: artist)
+
+        await fetchLyrics(key: key, videoId: videoId, title: title, artist: artist)
     }
 
     func updateCurrentLine(elapsedTime: TimeInterval) {
         guard !lines.isEmpty else { return }
+        // If we have lyrics but elapsedTime hasn't advanced yet (< first timestamp),
+        // show the very first line as a preview rather than nothing.
         let idx = binarySearch(timestamp: elapsedTime)
-        let line = idx >= 0 ? lines[idx].text : ""
+        let line = idx >= 0 ? lines[idx].text : lines[0].text
         if line != currentLinePublisher.value {
             currentLinePublisher.send(line)
         }
@@ -32,25 +40,37 @@ actor LyricsEngine {
 
     // MARK: - Private
 
-    private func fetchLyrics(videoId: String, title: String, artist: String) async {
-        if let cached = cache[videoId] {
+    private func fetchLyrics(key: String, videoId: String, title: String, artist: String) async {
+        if let cached = cache[key] {
             lines = cached
             availablePublisher.send(true)
             return
         }
 
-        // Retry once after 3 s on failure
-        for attempt in 0..<2 {
-            if attempt > 0 { try? await Task.sleep(nanoseconds: 3_000_000_000) }
-            if let fetched = await captionsFetcher.fetch(videoId: videoId) {
-                cache[videoId] = fetched
-                lines = fetched
-                availablePublisher.send(true)
-                return
-            }
+        // 1. YouTube timedtext (requires valid videoId + YTM session cookies via URLSession —
+        //    often returns 403; LRCLIB is the reliable path)
+        if !videoId.isEmpty, let fetched = await captionsFetcher.fetch(videoId: videoId) {
+            store(fetched, for: key); return
+        }
+
+        // 2. LRCLIB — no auth, excellent coverage for popular tracks
+        if let fetched = await lrclibFetcher.fetch(title: title, artist: artist) {
+            store(fetched, for: key); return
+        }
+
+        // 3. One retry after 3 s in case of transient network failure
+        try? await Task.sleep(nanoseconds: 3_000_000_000)
+        if let fetched = await lrclibFetcher.fetch(title: title, artist: artist) {
+            store(fetched, for: key); return
         }
 
         availablePublisher.send(false)
+    }
+
+    private func store(_ fetched: [LyricLine], for key: String) {
+        cache[key] = fetched
+        lines = fetched
+        availablePublisher.send(true)
     }
 
     private func binarySearch(timestamp: TimeInterval) -> Int {

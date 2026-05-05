@@ -1,5 +1,6 @@
 import Cocoa
 
+@MainActor
 @main
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
