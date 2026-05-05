@@ -1,0 +1,40 @@
+name: YTMBar
+
+options:
+  bundleIdPrefix: com.ytmbar
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+  xcodeVersion: "15.4"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    ENABLE_HARDENED_RUNTIME: YES
+    DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+
+targets:
+  YTMBar:
+    type: application
+    platform: macOS
+    sources:
+      - path: YTMBar/App
+      - path: YTMBar/Models
+      - path: YTMBar/Player
+      - path: YTMBar/StatusBar
+      - path: YTMBar/Lyrics
+    resources:
+      - path: YTMBar/Resources/Assets.xcassets
+      - path: YTMBar/Resources/Selectors.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ytmbar.YTMBar
+        INFOPLIST_FILE: YTMBar/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: YTMBar/Resources/YTMBar.entitlements
+        CODE_SIGN_STYLE: Automatic
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        PRODUCT_NAME: YTMBar
+    dependencies:
+      - sdk: WebKit.framework
